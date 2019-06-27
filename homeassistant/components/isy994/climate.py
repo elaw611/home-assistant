@@ -323,6 +323,7 @@ class ISYThermostatDevice(ISYDevice, ClimateDevice):
         by sending a value of 2 times the Temp. Correct by dividing by 2 here.
         """
         if temp is None:
+        if temp is None or temp == -1 * float('inf'):
             return None
         if self._uom == '101' or self._uom == 'degrees':
             return round(int(temp) / 2.0, 1)
