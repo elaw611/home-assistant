@@ -674,5 +674,4 @@ class ISYDevice(Entity):
             for name, val in self._node.aux_properties.items():
                 attr[name] = '{} {}'.format(val.get('value'), val.get('uom'))
         self._attrs.update(attr)
-        return attr
         return self._attrs
