@@ -192,7 +192,6 @@ ISY994_EVENT_FRIENDLY_NAME = {
     "CLISPH": "Heat Setpoint",
     "CLISPC": "Cool Setpoint",
     "CLIFS": "Fan State",
-    "CLIMD": "Thermostat Mode",
     "CLIHUM": "Humidity",
     "CLIHCS": "Heat/Cool State",
     "CLIEMD": "Energy Saving Mode",
@@ -314,17 +313,20 @@ def _check_for_zwave_cat(hass: HomeAssistant, node,
     This is for (presumably) every version of the ISY firmware, but only
     works for Z-Wave Devices with the devtype.cat property.
     """
+    _LOGGER.warning("ISYTEST: Checking %s", node)
     if not hasattr(node, 'devtype_cat') or node.devtype_cat is None:
         # Node doesn't have a device type category (non-Z-Wave device)
         return False
 
     device_type = node.devtype_cat
+    _LOGGER.warning("ISYTEST: %s has device_type %s", node, device_type)
     domains = SUPPORTED_DOMAINS if not single_domain else [single_domain]
     for domain in domains:
         if any([device_type.startswith(t) for t in
                 set(NODE_FILTERS[domain]['zwave_cat'])]):
 
             hass.data[ISY994_NODES][domain].append(node)
+            _LOGGER.warning("ISYTEST: node.nid: %s, devtype_cat: %s, domain: %s", node.nid, node.devtype_cat, domain)
             return True
 
     return False
