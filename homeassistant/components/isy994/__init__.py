@@ -89,12 +89,16 @@ CONFIG_SCHEMA = vol.Schema({
 
 # Do not use the Hass consts for the states here - we're matching exact API
 # responses, not using them for Hass states
+# Z-Wave Categories: https://www.universal-devices.com/developers/
+#                      wsdk/5.0.4/4_fam.xml
 NODE_FILTERS = {
     'binary_sensor': {
         'uom': [],
         'states': [],
         'node_def_id': ['BinaryAlarm', 'OnOffControl_ADV'],
-        'insteon_type': ['16.']  # Does a startswith() match; include the dot
+        'insteon_type': ['7.13.', '16.'],  # Does a startswith() match; incl .
+        'zwave_cat': (['104', '112', '138'] +
+                      list(map(str, range(148, 179))))
     },
     'sensor': {
         # This is just a more-readable way of including MOST uoms between 1-100
@@ -108,25 +112,30 @@ NODE_FILTERS = {
                 list(map(str, range(82, 97)))),
         'states': [],
         'node_def_id': ['IMETER_SOLO'],
-        'insteon_type': ['9.0.', '9.7.', '4.33.1.']
+        'insteon_type': ['9.0.', '9.7.'],
+        'zwave_cat': (['118'] +
+                      list(map(str, range(180, 184))))
     },
     'lock': {
         'uom': ['11'],
         'states': ['locked', 'unlocked'],
         'node_def_id': ['DoorLock'],
-        'insteon_type': ['15.']
+        'insteon_type': ['15.'],
+        'zwave_cat': ['111']
     },
     'fan': {
         'uom': [],
         'states': ['off', 'low', 'med', 'high'],
         'node_def_id': ['FanLincMotor'],
-        'insteon_type': ['1.46.']
+        'insteon_type': ['1.46.'],
+        'zwave_cat': []
     },
     'cover': {
         'uom': ['97'],
         'states': ['open', 'closed', 'closing', 'opening', 'stopped'],
         'node_def_id': [],
-        'insteon_type': []
+        'insteon_type': [],
+        'zwave_cat': []
     },
     'light': {
         'uom': ['51'],
@@ -136,7 +145,8 @@ NODE_FILTERS = {
                         'DimmerLampOnly', 'BallastRelayLampSwitch',
                         'BallastRelayLampSwitch_ADV',
                         'RemoteLinc2', 'RemoteLinc2_ADV'],
-        'insteon_type': ['1.']
+        'insteon_type': ['1.'],
+        'zwave_cat': ['109', '119']
     },
     'switch': {
         'uom': ['2', '78'],
@@ -150,14 +160,15 @@ NODE_FILTERS = {
                         'BinaryControl_ADV', 'AlertModuleSiren',
                         'AlertModuleSiren_ADV', 'AlertModuleArmed', 'Siren',
                         'Siren_ADV'],
-        'insteon_type': ['2.', '9.10.', '9.11.']
+        'insteon_type': ['2.', '9.10.', '9.11.'],
+        'zwave_cat': ['121', '122', '123', '137', '141', '147']
     },
     'climate': {
         'uom': ['2'],
         'states': ['heating', 'cooling', 'idle', 'fan_only', 'off'],
         'node_def_id': ['TempLinc', 'Thermostat'],
-        'insteon_type': ['5.11.16.', '5.11.13.', '5.10.14.', '5.11.15.',
-                         '5.3.149.']
+        'insteon_type': ['5.'],
+        'zwave_cat': ['140']
     }
 }
 
@@ -174,6 +185,65 @@ ISY994_NODES = "isy994_nodes"
 ISY994_WEATHER = "isy994_weather"
 ISY994_PROGRAMS = "isy994_programs"
 ISY994_VARIABLES = "isy994_variables"
+
+ISY994_EVENT_FRIENDLY_NAME = {
+    "OL": "On Level",
+    "RR": "Ramp Rate",
+    "CLISPH": "Heat Setpoint",
+    "CLISPC": "Cool Setpoint",
+    "CLIFS": "Fan State",
+    "CLIMD": "Thermostat Mode",
+    "CLIHUM": "Humidity",
+    "CLIHCS": "Heat/Cool State",
+    "CLIEMD": "Energy Saving Mode",
+    "ERR": "Device communication errors",
+    "UOM": "Unit of Measure",
+    "TPW": "Total kW Power",
+    "PPW": "Polarized Power",
+    "PF": "Power Factor",
+    "CC": "Current",
+    "CV": "Voltage",
+    "AIRFLOW": "Air Flow",
+    "ALARM": "Alarm",
+    "ANGLE": "Angle Position",
+    "ATMPRES": "Atmospheric Pressure",
+    "BARPRES": "Barometric Pressure",
+    "BATLVL": "Battery Level",
+    "CLIMD": "Mode",
+    "CLISMD": "Schedule Mode",
+    "CLITEMP": "Temperature",
+    "CO2LVL": "CO2 Level",
+    "CPW": "Power",
+    "DISTANC": "Distance",
+    "ELECRES": "Electrical Resistivity",
+    "ELECCON": "Electrical Conductivity",
+    "GPV": "General Purpose",
+    "GVOL": "Gas Volume",
+    "LUMIN": "Luminance",
+    "MOIST": "Moisture",
+    "PCNT": "Pulse Count",
+    "PULSCNT": "Pulse Count",
+    "RAINRT": "Rain Rate",
+    "ROTATE": "Rotation",
+    "SEISINT": "Seismic Intensity",
+    "SEISMAG": "Seismic Magnitude",
+    "SOLRAD": "Solar Radiation",
+    "SPEED": "Speed",
+    "SVOL": "Sound Volume",
+    "TANKCAP": "Tank Capacity",
+    "TIDELVL": "Tide Level",
+    "TIMEREM": "Time Remaining",
+    "UAC": "User Number",
+    "UV": "UV Light",
+    "USRNUM": "User Number",
+    "VOCLVL": "VOC Level",
+    "WEIGHT": "Weight",
+    "WINDDIR": "Wind Direction",
+    "WVOL": "Water Volume"
+}
+
+ISY994_EVENT_IGNORE = ['DON', 'ST', 'DFON', 'DOF', 'DFOF', 'BEEP', 'RESET',
+                       'X10', 'BMAN', 'SMAN', 'BRT', 'DIM', 'BUSY']
 
 WeatherNode = namedtuple('WeatherNode', ('status', 'name', 'uom'))
 
@@ -230,6 +300,29 @@ def _check_for_insteon_type(hass: HomeAssistant, node,
             if domain == 'climate' and int(node.nid[-1]) in [2, 3]:
                 hass.data[ISY994_NODES]['binary_sensor'].append(node)
                 return True
+
+            hass.data[ISY994_NODES][domain].append(node)
+            return True
+
+    return False
+
+
+def _check_for_zwave_cat(hass: HomeAssistant, node,
+                         single_domain: str = None) -> bool:
+    """Check if the node matches the ISY Z-Wave Category for any domains.
+
+    This is for (presumably) every version of the ISY firmware, but only
+    works for Z-Wave Devices with the devtype.cat property.
+    """
+    if not hasattr(node, 'devtype_cat') or node.devtype_cat is None:
+        # Node doesn't have a device type category (non-Z-Wave device)
+        return False
+
+    device_type = node.devtype_cat
+    domains = SUPPORTED_DOMAINS if not single_domain else [single_domain]
+    for domain in domains:
+        if any([device_type.startswith(t) for t in
+                set(NODE_FILTERS[domain]['zwave_cat'])]):
 
             hass.data[ISY994_NODES][domain].append(node)
             return True
@@ -344,6 +437,8 @@ def _categorize_nodes(hass: HomeAssistant, nodes, ignore_identifier: str,
         if _check_for_node_def(hass, node):
             continue
         if _check_for_insteon_type(hass, node):
+            continue
+        if _check_for_zwave_cat(hass, node):
             continue
         if _check_for_uom_id(hass, node):
             continue
@@ -488,12 +583,12 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 class ISYDevice(Entity):
     """Representation of an ISY994 device."""
 
-    _attrs = {}
     _name = None  # type: str
 
     def __init__(self, node) -> None:
         """Initialize the insteon device."""
         self._node = node
+        self._attrs = {}
         self._change_handler = None
         self._control_handler = None
 
@@ -517,6 +612,15 @@ class ISYDevice(Entity):
             'control': event.event,
             'value': event.nval
         })
+
+        # Some attributes are only given by the ISY in the event stream
+        # or in a direct query of a node. These are not picked up in PyISY.
+        # Translate some common ones here:
+        if event.event not in ISY994_EVENT_IGNORE:
+            attr_name = ISY994_EVENT_FRIENDLY_NAME.get(event.event,
+                                                       event.event)
+            self._attrs[attr_name] = int(event.nval)
+            self.schedule_update_ha_state()
 
     @property
     def unique_id(self) -> str:
@@ -559,9 +663,16 @@ class ISYDevice(Entity):
 
     @property
     def device_state_attributes(self) -> Dict:
-        """Get the state attributes for the device."""
+        """Get the state attributes for the device.
+
+        The 'aux_properties' in the PyISY Node class are combined with the
+        other attributes which have been picked up from the event stream and
+        the combined result are returned as the device state attributes.
+        """
         attr = {}
         if hasattr(self._node, 'aux_properties'):
             for name, val in self._node.aux_properties.items():
                 attr[name] = '{} {}'.format(val.get('value'), val.get('uom'))
+        self._attrs.update(attr)
         return attr
+        return self._attrs
