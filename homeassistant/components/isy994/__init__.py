@@ -18,26 +18,17 @@ from homeassistant.helpers import config_validation as cv, discovery
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.typing import ConfigType, Dict
 
+from .const import (
+    CONF_ENABLE_CLIMATE, CONF_IGNORE_STRING, CONF_ISY_VARIABLES,
+    CONF_SENSOR_STRING, CONF_TLS_VER, DEFAULT_IGNORE_STRING, DEFAULT_OFF_VALUE,
+    DEFAULT_ON_VALUE, DEFAULT_SENSOR_STRING, DOMAIN,
+    ISY994_EVENT_FRIENDLY_NAME, ISY994_EVENT_IGNORE, ISY994_NODES,
+    ISY994_PROGRAMS, ISY994_VARIABLES, ISY994_WEATHER, KEY_ACTIONS, KEY_FOLDER,
+    KEY_MY_PROGRAMS, KEY_STATUS, NODE_FILTERS, SCENE_DOMAIN, SUPPORTED_DOMAINS,
+    SUPPORTED_PROGRAM_DOMAINS, SUPPORTED_VARIABLE_DOMAINS, UOM_FRIENDLY_NAME,
+    UOM_TO_STATES, INSTEON_RAMP_RATES)
+
 _LOGGER = logging.getLogger(__name__)
-
-DOMAIN = 'isy994'
-
-CONF_IGNORE_STRING = 'ignore_string'
-CONF_SENSOR_STRING = 'sensor_string'
-CONF_ENABLE_CLIMATE = 'enable_climate'
-CONF_ISY_VARIABLES = 'isy_variables'
-CONF_TLS_VER = 'tls'
-
-DEFAULT_IGNORE_STRING = '{IGNORE ME}'
-DEFAULT_SENSOR_STRING = 'sensor'
-
-DEFAULT_ON_VALUE = 1
-DEFAULT_OFF_VALUE = 0
-
-KEY_ACTIONS = 'actions'
-KEY_FOLDER = 'folder'
-KEY_MY_PROGRAMS = 'My Programs'
-KEY_STATUS = 'status'
 
 VAR_BASE_SCHEMA = vol.Schema({
     vol.Required(CONF_ID): cv.positive_int,
@@ -86,163 +77,6 @@ CONFIG_SCHEMA = vol.Schema({
         vol.Optional(CONF_ISY_VARIABLES, default={}): ISY_VARIABLES_SCHEMA
     })
 }, extra=vol.ALLOW_EXTRA)
-
-# Do not use the Hass consts for the states here - we're matching exact API
-# responses, not using them for Hass states
-# Z-Wave Categories: https://www.universal-devices.com/developers/
-#                      wsdk/5.0.4/4_fam.xml
-NODE_FILTERS = {
-    'binary_sensor': {
-        'uom': [],
-        'states': [],
-        'node_def_id': ['BinaryAlarm', 'OnOffControl_ADV'],
-        'insteon_type': ['7.13.', '16.'],  # Does a startswith() match; incl .
-        'zwave_cat': (['104', '112', '138'] +
-                      list(map(str, range(148, 179))))
-    },
-    'sensor': {
-        # This is just a more-readable way of including MOST uoms between 1-100
-        # (Remember that range() is non-inclusive of the stop value)
-        'uom': (['1'] +
-                list(map(str, range(3, 11))) +
-                list(map(str, range(12, 51))) +
-                list(map(str, range(52, 66))) +
-                list(map(str, range(69, 78))) +
-                ['79'] +
-                list(map(str, range(82, 97)))),
-        'states': [],
-        'node_def_id': ['IMETER_SOLO'],
-        'insteon_type': ['9.0.', '9.7.'],
-        'zwave_cat': (['118'] +
-                      list(map(str, range(180, 184))))
-    },
-    'lock': {
-        'uom': ['11'],
-        'states': ['locked', 'unlocked'],
-        'node_def_id': ['DoorLock'],
-        'insteon_type': ['15.'],
-        'zwave_cat': ['111']
-    },
-    'fan': {
-        'uom': [],
-        'states': ['off', 'low', 'med', 'high'],
-        'node_def_id': ['FanLincMotor'],
-        'insteon_type': ['1.46.'],
-        'zwave_cat': []
-    },
-    'cover': {
-        'uom': ['97'],
-        'states': ['open', 'closed', 'closing', 'opening', 'stopped'],
-        'node_def_id': [],
-        'insteon_type': [],
-        'zwave_cat': []
-    },
-    'light': {
-        'uom': ['51'],
-        'states': ['on', 'off', '%'],
-        'node_def_id': ['DimmerLampSwitch', 'DimmerLampSwitch_ADV',
-                        'DimmerSwitchOnly', 'DimmerSwitchOnly_ADV',
-                        'DimmerLampOnly', 'BallastRelayLampSwitch',
-                        'BallastRelayLampSwitch_ADV',
-                        'RemoteLinc2', 'RemoteLinc2_ADV'],
-        'insteon_type': ['1.'],
-        'zwave_cat': ['109', '119']
-    },
-    'switch': {
-        'uom': ['2', '78'],
-        'states': ['on', 'off'],
-        'node_def_id': ['OnOffControl', 'RelayLampSwitch',
-                        'RelayLampSwitch_ADV', 'RelaySwitchOnlyPlusQuery',
-                        'RelaySwitchOnlyPlusQuery_ADV', 'RelayLampOnly',
-                        'RelayLampOnly_ADV', 'KeypadButton',
-                        'KeypadButton_ADV', 'EZRAIN_Input', 'EZRAIN_Output',
-                        'EZIO2x4_Input', 'EZIO2x4_Input_ADV', 'BinaryControl',
-                        'BinaryControl_ADV', 'AlertModuleSiren',
-                        'AlertModuleSiren_ADV', 'AlertModuleArmed', 'Siren',
-                        'Siren_ADV'],
-        'insteon_type': ['2.', '9.10.', '9.11.'],
-        'zwave_cat': ['121', '122', '123', '137', '141', '147']
-    },
-    'climate': {
-        'uom': ['2'],
-        'states': ['heating', 'cooling', 'idle', 'fan_only', 'off'],
-        'node_def_id': ['TempLinc', 'Thermostat'],
-        'insteon_type': ['5.'],
-        'zwave_cat': ['140']
-    }
-}
-
-SUPPORTED_DOMAINS = ['binary_sensor', 'sensor', 'lock', 'fan', 'cover',
-                     'light', 'switch', 'climate']
-SUPPORTED_PROGRAM_DOMAINS = ['binary_sensor', 'lock', 'fan', 'cover', 'switch']
-SUPPORTED_VARIABLE_DOMAINS = ['binary_sensor', 'sensor', 'switch']
-
-# ISY Scenes are more like Switches than Hass Scenes
-# (they can turn off, and report their state)
-SCENE_DOMAIN = 'switch'
-
-ISY994_NODES = "isy994_nodes"
-ISY994_WEATHER = "isy994_weather"
-ISY994_PROGRAMS = "isy994_programs"
-ISY994_VARIABLES = "isy994_variables"
-
-ISY994_EVENT_FRIENDLY_NAME = {
-    "OL": "On Level",
-    "RR": "Ramp Rate",
-    "CLISPH": "Heat Setpoint",
-    "CLISPC": "Cool Setpoint",
-    "CLIFS": "Fan State",
-    "CLIHUM": "Humidity",
-    "CLIHCS": "Heat/Cool State",
-    "CLIEMD": "Energy Saving Mode",
-    "ERR": "Device communication errors",
-    "UOM": "Unit of Measure",
-    "TPW": "Total kW Power",
-    "PPW": "Polarized Power",
-    "PF": "Power Factor",
-    "CC": "Current",
-    "CV": "Voltage",
-    "AIRFLOW": "Air Flow",
-    "ALARM": "Alarm",
-    "ANGLE": "Angle Position",
-    "ATMPRES": "Atmospheric Pressure",
-    "BARPRES": "Barometric Pressure",
-    "BATLVL": "Battery Level",
-    "CLIMD": "Mode",
-    "CLISMD": "Schedule Mode",
-    "CLITEMP": "Temperature",
-    "CO2LVL": "CO2 Level",
-    "CPW": "Power",
-    "DISTANC": "Distance",
-    "ELECRES": "Electrical Resistivity",
-    "ELECCON": "Electrical Conductivity",
-    "GPV": "General Purpose",
-    "GVOL": "Gas Volume",
-    "LUMIN": "Luminance",
-    "MOIST": "Moisture",
-    "PCNT": "Pulse Count",
-    "PULSCNT": "Pulse Count",
-    "RAINRT": "Rain Rate",
-    "ROTATE": "Rotation",
-    "SEISINT": "Seismic Intensity",
-    "SEISMAG": "Seismic Magnitude",
-    "SOLRAD": "Solar Radiation",
-    "SPEED": "Speed",
-    "SVOL": "Sound Volume",
-    "TANKCAP": "Tank Capacity",
-    "TIDELVL": "Tide Level",
-    "TIMEREM": "Time Remaining",
-    "UAC": "User Number",
-    "UV": "UV Light",
-    "USRNUM": "User Number",
-    "VOCLVL": "VOC Level",
-    "WEIGHT": "Weight",
-    "WINDDIR": "Wind Direction",
-    "WVOL": "Water Volume"
-}
-
-ISY994_EVENT_IGNORE = ['DON', 'ST', 'DFON', 'DOF', 'DFOF', 'BEEP', 'RESET',
-                       'X10', 'BMAN', 'SMAN', 'BRT', 'DIM', 'BUSY']
 
 WeatherNode = namedtuple('WeatherNode', ('status', 'name', 'uom'))
 
@@ -313,20 +147,17 @@ def _check_for_zwave_cat(hass: HomeAssistant, node,
     This is for (presumably) every version of the ISY firmware, but only
     works for Z-Wave Devices with the devtype.cat property.
     """
-    _LOGGER.warning("ISYTEST: Checking %s", node)
     if not hasattr(node, 'devtype_cat') or node.devtype_cat is None:
         # Node doesn't have a device type category (non-Z-Wave device)
         return False
 
     device_type = node.devtype_cat
-    _LOGGER.warning("ISYTEST: %s has device_type %s", node, device_type)
     domains = SUPPORTED_DOMAINS if not single_domain else [single_domain]
     for domain in domains:
         if any([device_type.startswith(t) for t in
                 set(NODE_FILTERS[domain]['zwave_cat'])]):
 
             hass.data[ISY994_NODES][domain].append(node)
-            _LOGGER.warning("ISYTEST: node.nid: %s, devtype_cat: %s, domain: %s", node.nid, node.devtype_cat, domain)
             return True
 
     return False
@@ -582,6 +413,35 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
+def _process_values(hass: HomeAssistant, value: str, uom: str,
+                    prec: str, ntype: str) -> str:
+    """Process event values to get the correct value and unit of measure."""
+    if uom is not None:
+        if uom == '2':
+            value = bool(int(value))
+            uom = None
+        elif uom == '100':
+            value = int(float(value) / 255.0 * 100.0)
+            uom = '%'
+        elif uom == '101':
+            value = round(float(value) / 2.0, 1)
+            uom = hass.config.units.temperature_unit
+        elif uom == '25' and ntype is not None and ntype.startswith('1.'):
+            # One off case for Insteon Ramp Rates
+            value = INSTEON_RAMP_RATES.get(value, int(value))
+            uom = None
+        elif UOM_TO_STATES.get(uom) is not None:
+            value = UOM_TO_STATES[uom].get(value, value)
+            uom = None
+        else:
+            uom = UOM_FRIENDLY_NAME.get(uom, None)
+            if prec is not None and prec != '0':
+                value = round(float(value) * pow(10, -int(prec)), int(prec))
+            else:
+                value = int(value)
+    return '{} {}'.format(value, uom) if uom is not None else value
+
+
 class ISYDevice(Entity):
     """Representation of an ISY994 device."""
 
@@ -609,20 +469,26 @@ class ISYDevice(Entity):
 
     def on_control(self, event: object) -> None:
         """Handle a control event from the ISY994 Node."""
-        self.hass.bus.fire('isy994_control', {
+        event_data = {
             'entity_id': self.entity_id,
             'control': event.event,
             'value': event.nval
-        })
+        }
 
         # Some attributes are only given by the ISY in the event stream
         # or in a direct query of a node. These are not picked up in PyISY.
         # Translate some common ones here:
-        if event.event not in ISY994_EVENT_IGNORE:
+        if event.nval is None or event.event not in ISY994_EVENT_IGNORE:
             attr_name = ISY994_EVENT_FRIENDLY_NAME.get(event.event,
                                                        event.event)
-            self._attrs[attr_name] = int(event.nval)
+            friendly_value = _process_values(self.hass, event.nval,
+                                             event.uom, event.prec,
+                                             self._node.type)
+            event_data['freindly_value'] = friendly_value
+            self._attrs[attr_name] = friendly_value
             self.schedule_update_ha_state()
+
+        self.hass.bus.fire('isy994_control', event_data)
 
     @property
     def unique_id(self) -> str:
@@ -674,6 +540,11 @@ class ISYDevice(Entity):
         attr = {}
         if hasattr(self._node, 'aux_properties'):
             for name, val in self._node.aux_properties.items():
-                attr[name] = '{} {}'.format(val.get('value'), val.get('uom'))
+                attr_name = ISY994_EVENT_FRIENDLY_NAME.get(name, name)
+                friendly_value = _process_values(self.hass, val.get('value'),
+                                                 val.get('uom', [None])[0],
+                                                 val.get('prec'),
+                                                 self._node.type)
+                attr[attr_name] = friendly_value
         self._attrs.update(attr)
         return self._attrs

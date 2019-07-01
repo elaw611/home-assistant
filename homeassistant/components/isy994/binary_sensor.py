@@ -12,18 +12,12 @@ from homeassistant.helpers.event import async_track_point_in_utc_time
 from homeassistant.helpers.typing import ConfigType, Dict
 from homeassistant.util import dt as dt_util
 
-from . import ISY994_NODES, ISY994_PROGRAMS, ISY994_VARIABLES, ISYDevice
+from . import ISYDevice
+from .const import (
+    ISY994_NODES, ISY994_PROGRAMS, ISY994_VARIABLES, ISY_BIN_SENS_DEVICE_TYPES,
+    SUPPORTED_BIN_SENS_CLASSES)
 
 _LOGGER = logging.getLogger(__name__)
-
-SUPPORTED_DEVICE_CLASSES = ['moisture', 'opening', 'motion', 'climate']
-
-ISY_DEVICE_TYPES = {
-    'moisture': ['16.8', '16.13', '16.14'],
-    'opening': ['16.9', '16.6', '16.7', '16.2', '16.17', '16.20', '16.21'],
-    'motion': ['16.1', '16.4', '16.5', '16.3'],
-    'climate': ['5.11', '5.10']
-}
 
 
 def setup_platform(hass, config: ConfigType,
@@ -120,9 +114,9 @@ def _detect_device_type(node) -> (str, str):
         # The type attribute didn't exist in the ISY's API response
         return (None, None)
 
-    for device_class in SUPPORTED_DEVICE_CLASSES:
+    for device_class in SUPPORTED_BIN_SENS_CLASSES:
         if any([device_type.startswith(t) for t in
-                set(ISY_DEVICE_TYPES[device_class])]):
+                set(ISY_BIN_SENS_DEVICE_TYPES[device_class])]):
             return device_class, device_type
 
     return (None, None)

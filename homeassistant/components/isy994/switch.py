@@ -7,7 +7,8 @@ from homeassistant.const import (
     CONF_ICON, CONF_ID, CONF_NAME, CONF_TYPE, STATE_OFF, STATE_ON)
 from homeassistant.helpers.typing import ConfigType, Dict
 
-from . import ISY994_NODES, ISY994_PROGRAMS, ISY994_VARIABLES, ISYDevice
+from . import ISYDevice
+from .const import ISY994_NODES, ISY994_PROGRAMS, ISY994_VARIABLES
 
 _LOGGER = logging.getLogger(__name__)
 
