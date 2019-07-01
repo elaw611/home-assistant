@@ -15,7 +15,7 @@ from homeassistant.util import dt as dt_util
 from . import ISYDevice
 from .const import (
     ISY994_NODES, ISY994_PROGRAMS, ISY994_VARIABLES, ISY_BIN_SENS_DEVICE_TYPES,
-    SUPPORTED_BIN_SENS_CLASSES)
+    ZWAVE_BIN_SENS_DEVICE_TYPES)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,42 +28,42 @@ def setup_platform(hass, config: ConfigType,
     child_nodes = []
 
     for node in hass.data[ISY994_NODES][DOMAIN]:
-        if node.parent_node is None:
-            device = ISYBinarySensorDevice(node)
+        device_class, device_type = _detect_device_type(node)
+        if node.parent_node is None or node.nid[0] in ['Z', 'n']:
+            device = ISYBinarySensorDevice(node, device_class)
             devices.append(device)
             devices_by_nid[node.nid] = device
         else:
-            # We'll process the child nodes last, to ensure all parent nodes
-            # have been processed
-            child_nodes.append(node)
+            # We'll process the Insteon child nodes last, to ensure all parent
+            # nodes have been processed
+            child_nodes.append((node, device_class, device_type))
 
-    for node in child_nodes:
-        try:
-            device_class, device_type = _detect_device_type(node)
-            # Thermostat Parent Nodes are not binary_sensors and will not show
-            # in this domain, but we don't need them to.
-            if device_class != 'climate':
+    # Handle some special child node cases for Insteon Devices
+    for (node, device_class, device_type) in child_nodes:
+        subnode_id = int(node.nid[-1], 16)
+        if device_class != 'climate':
+            try:
                 parent_device = devices_by_nid[node.parent_node.nid]
-        except KeyError:
-            _LOGGER.error("Node %s has a parent node %s, but no device "
-                          "was created for the parent. Skipping.",
-                          node.nid, node.parent_nid)
-        else:
-            subnode_id = int(node.nid[-1], 16)
-            if device_class in ('opening', 'moisture'):
-                # These sensors use an optional "negative" subnode 2 to snag
-                # all state changes
-                if subnode_id == 2:
-                    parent_device.add_negative_node(node)
-                elif subnode_id == 4:
-                    # Subnode 4 is the heartbeat node, which we will represent
-                    # as a separate binary_sensor
-                    device = ISYBinarySensorHeartbeat(node, parent_device)
-                    parent_device.add_heartbeat_device(device)
-                    devices.append(device)
-            elif device_class == 'motion':
-                if device_type is not None and \
-                                  device_type.startswith('16.1.65.'):
+            except KeyError:
+                _LOGGER.error("Node %s has a parent node %s, but no device "
+                              "was created for the parent. Skipping.",
+                              node.nid, node.parent_nid)
+            else:
+                subnode_id = int(node.nid[-1], 16)
+                if device_class in ('opening', 'moisture'):
+
+                    # These sensors use an optional "negative" subnode 2 to
+                    # snag all state changes
+                    if subnode_id == 2:
+                        parent_device.add_negative_node(node)
+                    elif subnode_id == 4:
+                        # Subnode 4 is the heartbeat node, which we will
+                        # represent as a separate binary_sensor
+                        device = ISYBinarySensorHeartbeat(node, parent_device)
+                        parent_device.add_heartbeat_device(device)
+                        devices.append(device)
+                elif device_class == 'motion' and device_type is not None and \
+                        device_type.startswith('16.1.65.'):
                     # Special case for Insteon Motion Sensor (1st Gen):
                     if subnode_id == 2:
                         # Subnode 2 is the Dusk/Dawn sensor
@@ -79,23 +79,23 @@ def setup_platform(hass, config: ConfigType,
                         device = ISYBinarySensorDevice(node, 'battery',
                                                        inital_state)
                         devices.append(device)
-            elif device_class == 'climate':
-                if subnode_id == 2:
-                    # Subnode 2 is the "Cool Control" sensor
-                    # It never reports its state until first use is
-                    # detected after an ISY Restart, so we assume it's off.
-                    # As soon as the ISY Event Stream connects if it has a
-                    # valid state, it will be set.
-                    device = ISYBinarySensorDevice(node, 'cold', False)
+                else:
+                    # We don't yet have any special logic for other sensor
+                    # types, so add the nodes as individual devices
+                    device = ISYBinarySensorDevice(node, device_class)
                     devices.append(device)
-                elif subnode_id == 3:
-                    # Subnode 3 is the "Heat Control" sensor
-                    device = ISYBinarySensorDevice(node, 'heat', False)
-                    devices.append(device)
-            else:
-                # We don't yet have any special logic for other sensor types,
-                # so add the nodes as individual devices
-                device = ISYBinarySensorDevice(node)
+        else:  # Climate Devices
+            if subnode_id == 2:
+                # Subnode 2 is the "Cool Control" sensor
+                # It never reports its state until first use is
+                # detected after an ISY Restart, so we assume it's off.
+                # As soon as the ISY Event Stream connects if it has a
+                # valid state, it will be set.
+                device = ISYBinarySensorDevice(node, 'cold', False)
+                devices.append(device)
+            elif subnode_id == 3:
+                # Subnode 3 is the "Heat Control" sensor
+                device = ISYBinarySensorDevice(node, 'heat', False)
                 devices.append(device)
 
     for name, status, _ in hass.data[ISY994_PROGRAMS][DOMAIN]:
@@ -114,12 +114,19 @@ def _detect_device_type(node) -> (str, str):
         # The type attribute didn't exist in the ISY's API response
         return (None, None)
 
-    for device_class in SUPPORTED_BIN_SENS_CLASSES:
-        if any([device_type.startswith(t) for t in
-                set(ISY_BIN_SENS_DEVICE_TYPES[device_class])]):
-            return device_class, device_type
+    # Z-Wave Devices:
+    if device_type[0] == '4':
+        device_type = 'Z{}'.format(node.devtype_cat)
+        for device_class in [*ZWAVE_BIN_SENS_DEVICE_TYPES]:
+            if node.devtype_cat in ZWAVE_BIN_SENS_DEVICE_TYPES[device_class]:
+                return device_class, device_type
+    else:  # Other devices (incl Insteon.)
+        for device_class in [*ISY_BIN_SENS_DEVICE_TYPES]:
+            if any([device_type.startswith(t) for t in
+                    set(ISY_BIN_SENS_DEVICE_TYPES[device_class])]):
+                return device_class, device_type
 
-    return (None, None)
+    return (None, device_type)
 
 
 def _is_val_unknown(val):
@@ -142,11 +149,7 @@ class ISYBinarySensorDevice(ISYDevice, BinarySensorDevice):
         super().__init__(node)
         self._negative_node = None
         self._heartbeat_device = None
-        if force_device_class is not None:
-            self._device_class_from_type = force_device_class
-        else:
-            self._device_class_from_type, _ = \
-                _detect_device_type(self._node)
+        self._device_class_from_type = force_device_class
         # pylint: disable=protected-access
         if _is_val_unknown(self._node.status._val):
             self._computed_state = unknown_state

@@ -469,6 +469,21 @@ ISY_BIN_SENS_DEVICE_TYPES = {
     'climate': ['5.11', '5.10']
 }
 
+ZWAVE_BIN_SENS_DEVICE_TYPES = {
+    'safety': ['137', '172', '176', '177', '178'],
+    'smoke': ['138', '156'],
+    'problem': ['148', '149', '157', '158', '164', '174', '175'],
+    'gas': ['150', '151'],
+    'sound': ['153'],
+    'cold': ['152', '168'],
+    'heat': ['154', '166', '167'],
+    'moisture': ['159', '169'],
+    'door': ['160'],
+    'battery': ['162'],
+    'motion': ['155'],
+    'vibration': ['173']
+}
+
 INSTEON_RAMP_RATES = {
     '0': '9 min',
     '1': '8 min',

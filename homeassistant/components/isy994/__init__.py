@@ -12,7 +12,7 @@ from homeassistant.const import (
     CONF_BINARY_SENSORS, CONF_DEVICE_CLASS, CONF_HOST, CONF_ICON, CONF_ID,
     CONF_NAME, CONF_PASSWORD, CONF_SENSORS, CONF_SWITCHES, CONF_TYPE,
     CONF_UNIT_OF_MEASUREMENT, CONF_USERNAME, EVENT_HOMEASSISTANT_STOP,
-    STATE_OFF, STATE_ON)
+    STATE_OFF, STATE_ON, STATE_UNKNOWN)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv, discovery
 from homeassistant.helpers.entity import Entity
@@ -418,7 +418,8 @@ def _process_values(hass: HomeAssistant, value: str, uom: str,
     """Process event values to get the correct value and unit of measure."""
     if uom is None:
         return int(value)
-
+    if float(value) == -1 * float('inf'):
+        return STATE_UNKNOWN
     if uom == '2':
         value = bool(int(value))
         uom = None

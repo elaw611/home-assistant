@@ -149,11 +149,6 @@ class ISYThermostatDevice(ISYDevice, ClimateDevice):
         return PRECISION_TENTHS
 
     @property
-    def value(self):
-        """Get the current value of the device."""
-        return self.fix_temp(self._node.status)
-
-    @property
     def temperature_unit(self):
         """Return the unit of measurement."""
         if self._temp_unit:
@@ -178,7 +173,9 @@ class ISYThermostatDevice(ISYDevice, ClimateDevice):
     @property
     def current_temperature(self):
         """Return the current temperature."""
-        return self.value
+        if self.is_unknown():
+            return None
+        return self.fix_temp(self.value)
 
     @property
     def target_temperature_step(self):
