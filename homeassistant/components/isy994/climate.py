@@ -3,57 +3,24 @@ import logging
 
 from homeassistant.components.climate import ClimateDevice
 from homeassistant.components.climate.const import (
-    ATTR_CURRENT_HUMIDITY, ATTR_CURRENT_TEMPERATURE, ATTR_FAN_LIST,
-    ATTR_FAN_MODE, ATTR_HOLD_MODE, ATTR_OPERATION_LIST, ATTR_OPERATION_MODE,
-    ATTR_TARGET_TEMP_HIGH, ATTR_TARGET_TEMP_LOW, DOMAIN, STATE_AUTO,
-    STATE_COOL, STATE_FAN_ONLY, STATE_HEAT, STATE_IDLE, SUPPORT_FAN_MODE,
-    SUPPORT_HOLD_MODE, SUPPORT_OPERATION_MODE, SUPPORT_TARGET_TEMPERATURE_HIGH,
-    SUPPORT_TARGET_TEMPERATURE_LOW)
+    DOMAIN, STATE_AUTO, STATE_COOL, STATE_FAN_ONLY, STATE_HEAT, STATE_IDLE,
+    SUPPORT_FAN_MODE, SUPPORT_HOLD_MODE, SUPPORT_OPERATION_MODE,
+    SUPPORT_TARGET_TEMPERATURE_HIGH, SUPPORT_TARGET_TEMPERATURE_LOW)
 from homeassistant.const import (
     PRECISION_TENTHS, STATE_OFF, STATE_ON, TEMP_CELSIUS, TEMP_FAHRENHEIT)
 from homeassistant.util.temperature import convert as convert_temperature
 
-from . import ISY994_NODES, ISYDevice
+from . import ISYDevice
+from .const import (
+    ISY994_NODES, ISY_CURRENT_HUMIDITY, ISY_FAN_MODE,
+    ISY_OPERATION_MODE, ISY_OPERATION_STATE, ISY_TARGET_TEMP_HIGH,
+    ISY_TARGET_TEMP_LOW, ISY_UOM, UOM_TO_STATES)
 
 _LOGGER = logging.getLogger(__name__)
 
-ISY_CURRENT_TEMPERATURE = 'ST'
-ISY_CURRENT_HUMIDITY = 'CLIHUM'
-ISY_TARGET_TEMP_HIGH = 'CLISPC'
-ISY_TARGET_TEMP_LOW = 'CLISPH'
-ISY_OPERATION_MODE = 'CLIMD'
-ISY_OPERATION_STATE = 'CLIHCS'
-ISY_FAN_MODE = 'CLIFS'
-ISY_UOM = 'UOM'
 
 DEFAULT_MIN_TEMP = 10
 DEFAULT_MAX_TEMP = 30
-
-# ISY Operation Modes (as passed back from ISY). Since these don't match
-# the required HASS Climate States, they will be split into HASS States
-# and Hold Modes in a separate function. Kept here for debugging purposes.
-ISY_MODE_OFF = 'off'
-ISY_MODE_HEAT = 'heat'
-ISY_MODE_COOL = 'cool'
-ISY_MODE_AUTO = 'auto'
-ISY_MODE_FAN_ONLY = 'fan_only'
-ISY_MODE_PROG_HEAT = 'program_heat'
-ISY_MODE_PROG_COOL = 'program_cool'
-ISY_MODE_PROG_AUTO = 'program_auto'
-
-# Translate ISY UOM 98
-VALUE_TO_ISY_MODE = {
-    0: ISY_MODE_OFF,
-    1: ISY_MODE_HEAT,
-    2: ISY_MODE_COOL,
-    3: ISY_MODE_AUTO,
-    4: ISY_MODE_FAN_ONLY,
-    5: ISY_MODE_PROG_AUTO,
-    6: ISY_MODE_PROG_HEAT,
-    7: ISY_MODE_PROG_COOL
-}
-
-MODE_TO_VALUE = {val: key for key, val in VALUE_TO_ISY_MODE.items()}
 
 # Translate ISY Operation Mode to HASS States & Hold Modes
 VALUE_TO_HASS_MODE = {
@@ -65,22 +32,6 @@ VALUE_TO_HASS_MODE = {
     5: (STATE_AUTO, 'program'),
     6: (STATE_HEAT, 'program'),
     7: (STATE_COOL, 'program')
-}
-
-# Translate ISY UOM 99
-FAN_VALUE_TO_MODE = {
-    7: STATE_ON,
-    8: STATE_AUTO
-}
-
-FAN_MODE_TO_VALUE = {val: key for key, val in FAN_VALUE_TO_MODE.items()}
-
-# Translate ISY UOM 66
-VALUE_TO_STATE = {
-    0: STATE_IDLE,
-    1: STATE_HEAT,
-    2: STATE_COOL,
-    3: STATE_FAN_ONLY
 }
 
 ISY_OPERATION_LIST = [STATE_HEAT, STATE_COOL, STATE_AUTO,
@@ -145,8 +96,8 @@ class ISYThermostatDevice(ISYDevice, ClimateDevice):
         current_operation = next((i for i in self._node.aux_properties.values()
                                   if i['id'] == ISY_OPERATION_MODE), False)
         if current_operation:
-            self._current_isy_operation = VALUE_TO_ISY_MODE.get(
-                current_operation['value'], None)
+            self._current_isy_operation = UOM_TO_STATES['98'].get(
+                str(current_operation['value']), None)
             self._current_operation, self._current_hold_mode = \
                 VALUE_TO_HASS_MODE.get(current_operation['value'], None)
 
@@ -166,14 +117,12 @@ class ISYThermostatDevice(ISYDevice, ClimateDevice):
             need to listen for it here.
         """
         if event.event == ISY_FAN_MODE:
-            self._fan_mode = FAN_VALUE_TO_MODE.get(int(event.nval),
-                                                   None)
+            self._fan_mode = UOM_TO_STATES['99'].get(event.nval, None)
         elif event.event == ISY_OPERATION_STATE:
-            self._current_status = VALUE_TO_STATE.get(int(event.nval),
-                                                      None)
+            self._current_status = UOM_TO_STATES['66'].get(event.nval, None)
         elif event.event == ISY_OPERATION_MODE:
             self._current_isy_operation = \
-                VALUE_TO_ISY_MODE.get(int(event.nval), None)
+                UOM_TO_STATES['98'].get(event.nval, None)
             self._current_operation, self._current_hold_mode = \
                 VALUE_TO_HASS_MODE.get(int(event.nval), None)
         elif event.event == ISY_UOM:
@@ -284,11 +233,6 @@ class ISYThermostatDevice(ISYDevice, ClimateDevice):
         """Return the maximum temperature."""
         return convert_temperature(DEFAULT_MAX_TEMP, TEMP_CELSIUS,
                                    self.temperature_unit)
-
-    @property
-    def device_state_attributes(self):
-        """Return the device specific state attributes."""
-        return None
 
     def set_temperature(self, **kwargs):
         """Set new target temperature."""
