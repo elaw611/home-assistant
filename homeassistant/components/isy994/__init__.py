@@ -416,29 +416,31 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
 def _process_values(hass: HomeAssistant, value: str, uom: str,
                     prec: str, ntype: str) -> str:
     """Process event values to get the correct value and unit of measure."""
-    if uom is not None:
-        if uom == '2':
-            value = bool(int(value))
-            uom = None
-        elif uom == '100':
-            value = int(float(value) / 255.0 * 100.0)
-            uom = '%'
-        elif uom == '101':
-            value = round(float(value) / 2.0, 1)
-            uom = hass.config.units.temperature_unit
-        elif uom == '25' and ntype is not None and ntype.startswith('1.'):
-            # One off case for Insteon Ramp Rates
-            value = INSTEON_RAMP_RATES.get(value, int(value))
-            uom = None
-        elif UOM_TO_STATES.get(uom) is not None:
-            value = UOM_TO_STATES[uom].get(value, value)
-            uom = None
+    if uom is None:
+        return int(value)
+
+    if uom == '2':
+        value = bool(int(value))
+        uom = None
+    elif uom == '100':
+        value = int(float(value) / 255.0 * 100.0)
+        uom = '%'
+    elif uom == '101':
+        value = round(float(value) / 2.0, 1)
+        uom = hass.config.units.temperature_unit
+    elif uom == '25' and ntype is not None and ntype[0] in ['1', '2']:
+        # One off case for Insteon Ramp Rates
+        value = INSTEON_RAMP_RATES.get(str(value), int(value))
+        uom = None
+    elif UOM_TO_STATES.get(uom) is not None:
+        value = UOM_TO_STATES[uom].get(str(value), int(value))
+        uom = None
+    else:
+        uom = UOM_FRIENDLY_NAME.get(uom, None)
+        if prec is not None and prec != '0':
+            value = round(float(value) * pow(10, -int(prec)), int(prec))
         else:
-            uom = UOM_FRIENDLY_NAME.get(uom, None)
-            if prec is not None and prec != '0':
-                value = round(float(value) * pow(10, -int(prec)), int(prec))
-            else:
-                value = int(value)
+            value = int(value)
     return '{} {}'.format(value, uom) if uom is not None else value
 
 

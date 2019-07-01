@@ -54,7 +54,7 @@ NODE_FILTERS = {
         'states': [],
         'node_def_id': ['IMETER_SOLO'],
         'insteon_type': ['9.0.', '9.7.'],
-        'zwave_cat': (['118'] +
+        'zwave_cat': (['118', '143'] +
                       list(map(str, range(180, 185))))
     },
     'lock': {
